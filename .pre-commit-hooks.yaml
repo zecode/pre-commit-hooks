@@ -112,6 +112,12 @@
     entry: detect-private-key
     language: python
     types: [text]
+-   id: detect-do-not-commit
+    name: Detect do-not-commit
+    description: Detects the presence of do-not-commit
+    entry: detect-do-not-commit
+    language: python
+    types: [file]
 -   id: double-quote-string-fixer
     name: Fix double quoted strings
     description: This hook replaces double quoted strings with single quoted strings
