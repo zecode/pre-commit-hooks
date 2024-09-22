@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 
@@ -6,6 +8,7 @@ import pytest
 from pre_commit_hooks.check_merge_conflict import main
 from pre_commit_hooks.util import cmd_output
 from testing.util import get_resource_path
+from testing.util import git_commit
 
 
 @pytest.fixture
@@ -20,19 +23,19 @@ def f1_is_a_conflict_file(tmpdir):
     with repo1.as_cwd():
         repo1_f1.ensure()
         cmd_output('git', 'add', '.')
-        cmd_output('git', 'commit', '--no-gpg-sign', '-m', 'commit1')
+        git_commit('-m', 'commit1')
 
     cmd_output('git', 'clone', str(repo1), str(repo2))
 
     # Commit in master
     with repo1.as_cwd():
         repo1_f1.write('parent\n')
-        cmd_output('git', 'commit', '--no-gpg-sign', '-am', 'master commit2')
+        git_commit('-am', 'master commit2')
 
     # Commit in clone and pull
     with repo2.as_cwd():
         repo2_f1.write('child\n')
-        cmd_output('git', 'commit', '--no-gpg-sign', '-am', 'clone commit2')
+        git_commit('-am', 'clone commit2')
         cmd_output('git', 'pull', '--no-rebase', retcode=None)
         # We should end up in a merge conflict!
         f1 = repo2_f1.read()
@@ -75,20 +78,20 @@ def repository_pending_merge(tmpdir):
     with repo1.as_cwd():
         repo1_f1.ensure()
         cmd_output('git', 'add', '.')
-        cmd_output('git', 'commit', '--no-gpg-sign', '-m', 'commit1')
+        git_commit('-m', 'commit1')
 
     cmd_output('git', 'clone', str(repo1), str(repo2))
 
     # Commit in master
     with repo1.as_cwd():
         repo1_f1.write('parent\n')
-        cmd_output('git', 'commit', '--no-gpg-sign', '-am', 'master commit2')
+        git_commit('-am', 'master commit2')
 
     # Commit in clone and pull without committing
     with repo2.as_cwd():
         repo2_f2.write('child\n')
         cmd_output('git', 'add', '.')
-        cmd_output('git', 'commit', '--no-gpg-sign', '-m', 'clone commit2')
+        git_commit('-m', 'clone commit2')
         cmd_output('git', 'pull', '--no-commit', '--no-rebase')
         # We should end up in a pending merge
         assert repo2_f1.read() == 'parent\n'
@@ -98,8 +101,14 @@ def repository_pending_merge(tmpdir):
 
 
 @pytest.mark.usefixtures('f1_is_a_conflict_file')
-def test_merge_conflicts_git():
+def test_merge_conflicts_git(capsys):
     assert main(['f1']) == 1
+    out, _ = capsys.readouterr()
+    assert out == (
+        "f1:1: Merge conflict string '<<<<<<<' found\n"
+        "f1:3: Merge conflict string '=======' found\n"
+        "f1:5: Merge conflict string '>>>>>>>' found\n"
+    )
 
 
 @pytest.mark.parametrize(
@@ -134,3 +143,15 @@ def test_care_when_assumed_merge(tmpdir):
     f = tmpdir.join('README.md')
     f.write_binary(b'problem\n=======\n')
     assert main([str(f.realpath()), '--assume-in-merge']) == 1
+
+
+def test_worktree_merge_conflicts(f1_is_a_conflict_file, tmpdir, capsys):
+    worktree = tmpdir.join('worktree')
+    cmd_output('git', 'worktree', 'add', str(worktree))
+    with worktree.as_cwd():
+        cmd_output(
+            'git', 'pull', '--no-rebase', 'origin', 'master', retcode=None,
+        )
+        msg = f1_is_a_conflict_file.join('.git/worktrees/worktree/MERGE_MSG')
+        assert msg.exists()
+        test_merge_conflicts_git(capsys)

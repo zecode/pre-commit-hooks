@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from pre_commit_hooks.check_json import main
@@ -9,6 +11,7 @@ from testing.util import get_resource_path
         ('bad_json.notjson', 1),
         ('bad_json_latin1.nonjson', 1),
         ('ok_json.json', 0),
+        ('duplicate_key_json.notjson', 1),
     ),
 )
 def test_main(capsys, filename, expected_retval):

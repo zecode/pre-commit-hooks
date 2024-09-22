@@ -1,20 +1,35 @@
+from __future__ import annotations
+
 import argparse
 from typing import Iterable
-from typing import Optional
+from typing import Iterator
 from typing import Sequence
-from typing import Set
 
 from pre_commit_hooks.util import added_files
 from pre_commit_hooks.util import cmd_output
 
 
-def lower_set(iterable: Iterable[str]) -> Set[str]:
+def lower_set(iterable: Iterable[str]) -> set[str]:
     return {x.lower() for x in iterable}
+
+
+def parents(file: str) -> Iterator[str]:
+    path_parts = file.split('/')
+    path_parts.pop()
+    while path_parts:
+        yield '/'.join(path_parts)
+        path_parts.pop()
+
+
+def directories_for(files: set[str]) -> set[str]:
+    return {parent for file in files for parent in parents(file)}
 
 
 def find_conflicting_filenames(filenames: Sequence[str]) -> int:
     repo_files = set(cmd_output('git', 'ls-files').splitlines())
+    repo_files |= directories_for(repo_files)
     relevant_files = set(filenames) | added_files()
+    relevant_files |= directories_for(relevant_files)
     repo_files -= relevant_files
     retv = 0
 
@@ -41,7 +56,7 @@ def find_conflicting_filenames(filenames: Sequence[str]) -> int:
     return retv
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'filenames', nargs='*',
@@ -54,4 +69,4 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 
 if __name__ == '__main__':
-    exit(main())
+    raise SystemExit(main())

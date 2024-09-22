@@ -12,10 +12,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     retv = 0
 
     for filename in args.filenames:
-        with open(filename, 'rb') as f:
-            if f.read(3) == b'\xef\xbb\xbf':
-                retv = 1
-                print(f'{filename}: Has a byte-order marker')
+        with open(filename, 'rb') as f_b:
+            bts = f_b.read(3)
+
+        if bts == b'\xef\xbb\xbf':
+            with open(filename, newline='', encoding='utf-8-sig') as f:
+                contents = f.read()
+            with open(filename, 'w', newline='', encoding='utf-8') as f:
+                f.write(contents)
+
+            print(f'{filename}: removed byte-order marker')
+            retv = 1
 
     return retv
 

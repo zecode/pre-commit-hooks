@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from pre_commit_hooks.requirements_txt_fixer import FAIL
@@ -30,6 +32,16 @@ from pre_commit_hooks.requirements_txt_fixer import Requirement
         ),
         (b'#comment\n\nfoo\nbar\n', FAIL, b'#comment\n\nbar\nfoo\n'),
         (b'#comment\n\nbar\nfoo\n', PASS, b'#comment\n\nbar\nfoo\n'),
+        (
+            b'foo\n\t#comment with indent\nbar\n',
+            FAIL,
+            b'\t#comment with indent\nbar\nfoo\n',
+        ),
+        (
+            b'bar\n\t#comment with indent\nfoo\n',
+            PASS,
+            b'bar\n\t#comment with indent\nfoo\n',
+        ),
         (b'\nfoo\nbar\n', FAIL, b'bar\n\nfoo\n'),
         (b'\nbar\nfoo\n', PASS, b'\nbar\nfoo\n'),
         (
@@ -56,6 +68,12 @@ from pre_commit_hooks.requirements_txt_fixer import Requirement
             b'f<=2\n'
             b'g<2\n',
         ),
+        (b'a==1\nb==1\na==1\n', FAIL, b'a==1\nb==1\n'),
+        (
+            b'a==1\nb==1\n#comment about a\na==1\n',
+            FAIL,
+            b'#comment about a\na==1\nb==1\n',
+        ),
         (b'ocflib\nDjango\nPyMySQL\n', FAIL, b'Django\nocflib\nPyMySQL\n'),
         (
             b'-e git+ssh://git_url@tag#egg=ocflib\nDjango\nPyMySQL\n',
@@ -64,6 +82,8 @@ from pre_commit_hooks.requirements_txt_fixer import Requirement
         ),
         (b'bar\npkg-resources==0.0.0\nfoo\n', FAIL, b'bar\nfoo\n'),
         (b'foo\npkg-resources==0.0.0\nbar\n', FAIL, b'bar\nfoo\n'),
+        (b'bar\npkg_resources==0.0.0\nfoo\n', FAIL, b'bar\nfoo\n'),
+        (b'foo\npkg_resources==0.0.0\nbar\n', FAIL, b'bar\nfoo\n'),
         (
             b'git+ssh://git_url@tag#egg=ocflib\nDjango\nijk\n',
             FAIL,
