@@ -13,11 +13,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     bad_files = []
-    binFileExt = ['dll', 'exe', 'bin', 'pdf', 'jar', 'g.cs', 'zip']
 
     for filename in args.filenames:
-        if any(filename.endswith('.' + ext) for ext in binFileExt):
-            continue
         with open(filename, 'rb') as f:
             content = f.read()
             if any(line in content for line in BLACKLIST):
